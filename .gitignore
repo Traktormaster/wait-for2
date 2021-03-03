@@ -1,0 +1,11 @@
+.idea
+.tox
+.cache
+*.pyc
+*.pyo
+*.so
+*~
+build/*
+dist/*
+*.egg-info
+MANIFEST
