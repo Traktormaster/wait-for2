@@ -4,9 +4,9 @@ cancellation of wait and completion of future differently and consistently acros
 
 ## Details
 Builtin `asyncio.wait_for()` behaviours:
-  - Python 3.6 and 3.7:
+  - Python 3.6, 3.7 and PyPy3:
     Cancellation of `wait_for` could lose the completed future's result.
-  - Python 3.8+ and PyPy3:
+  - Python 3.8+:
     Cancellation of `wait_for` could lose the cancellation request.
 
 Whenever waiting for a future's result the user expects to either have the future completed or cancelled.
