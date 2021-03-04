@@ -1,6 +1,9 @@
 """
 wait_for2
-Asyncio wait_for with more control over cancellation.
+Asyncio wait_for that can handle simultaneous cancellation and future completion.
+
+:copyright: 2021 Nándor Mátravölgyi
+:license: Apache2, see LICENSE for more details.
 """
 
 __author__ = "Nándor Mátravölgyi"

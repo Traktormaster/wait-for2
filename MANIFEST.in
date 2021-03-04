@@ -1,4 +1,6 @@
 include setup.py
+include LICENSE
+include NOTICE
 include README.md
 include CHANGELOG.md
 recursive-include tests *.py

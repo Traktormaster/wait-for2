@@ -1,11 +1,21 @@
+"""
+Test the behaviour of the new implementation while asserting the behaviour of the builtin one.
+
+:copyright: 2021 Nándor Mátravölgyi
+:license: Apache2, see LICENSE for more details.
+"""
 import asyncio
+import sys
 
 import pytest
 
 import wait_for2
 
 
-class TestError(Exception):
+BUILTIN_PREFERS_CANCELLATION_OVER_RESULT = sys.version_info < (3, 8) or hasattr(sys, "pypy_version_info")
+
+
+class JobError(Exception):
     pass
 
 
@@ -21,7 +31,7 @@ class _AbstractEngine(object):
     async def job_error(self):
         await asyncio.sleep(1.0)
         try:
-            raise TestError()
+            raise JobError()
         finally:
             self.event.set()
 
@@ -176,20 +186,20 @@ async def test_wait_for2_basic():
 
 @pytest.mark.asyncio
 async def test_asyncio_wait_for_stuck():
-    with pytest.raises(StuckError):  # this does not work, it gets "stuck" by ignoring the first cancel
+    with pytest.raises(JobError if BUILTIN_PREFERS_CANCELLATION_OVER_RESULT else StuckError):
         await _WaitFor().run()
 
 
 @pytest.mark.asyncio
 async def test_asyncio_wait_pass():
-    with pytest.raises(TestError):
+    with pytest.raises(JobError):
         await _Wait().run()
 
 
 @pytest.mark.asyncio
 async def test_wait_for2_pass():
     w = _WaitFor2()
-    with pytest.raises(TestError):
+    with pytest.raises(JobError):
         await w.run()
     assert w.tasks[1].cancelled()
     assert w.tasks[1].done()
