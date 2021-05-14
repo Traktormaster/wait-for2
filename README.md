@@ -16,14 +16,18 @@ ignoring the cancellation is critical to the application it may not be suitable 
 
 Using this implementation, in case both conditions occur at the same time a subclassed `CancelledError` will be
 raised which also contains the result of the future. The caller code must catch this exception and handle the
-result if it is important. Otherwise it can be used the same way as the builtin `wait_for`.
+result if it is important. Otherwise, it can be used the same way as the builtin `wait_for`.
+
+If the caller prefers to handle the race-condition with a callback, the `race_handler` argument may be provided.
+It will be called with the result of the future when the waiter task is being cancelled. Even if this is provided,
+the special error will be raised in the place of a normal CancelledError.
 
 NOTE: `CancelledWithResultError` is limited to the coroutine `wait_for` is invoked from!
 If this `wait_for` is wrapped in tasks those will not propagate the special exception, but raise their own
 `CancelledError` instances.
 
 # Install & usage
-A source distribution is available on PyPI:
+A package is available on PyPI:
 
 ```console
 $ python -m pip install wait_for2
@@ -46,4 +50,8 @@ except wait_for2.CancelledWithResultError as e:
     # NOTE: e.result could be an exception raised by the task; handling or ignoring it is up to the user code here
     await process_result(e.result)
     raise asyncio.CancelledError()
+
+# alternatively with a callback:
+await process_result(await wait_for2.wait_for(task, 5.0, race_handler=process_result))
+
 ```

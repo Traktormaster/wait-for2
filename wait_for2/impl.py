@@ -60,7 +60,7 @@ async def wait_for(fut, timeout, *, loop=None, race_handler=None):
     result if it is important. Otherwise it can be used the same way as the builtin wait_for.
 
     If the caller prefers to handle the race-condition with a callback, the `race_handler` argument may be provided.
-    It will be called with the result of the future when the waiter task is being cancelled. Even if this is provided
+    It will be called with the result of the future when the waiter task is being cancelled. Even if this is provided,
     the special error will be raised in the place of a normal CancelledError.
 
     NOTE: CancelledWithResultError is limited to the coroutine wait_for is invoked from!
