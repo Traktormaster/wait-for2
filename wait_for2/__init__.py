@@ -11,4 +11,4 @@ __copyright__ = "Copyright 2021 Nándor Mátravölgyi"
 __author_email__ = "nandor.matra@gmail.com"
 __version__ = "0.1.0"
 
-from .impl import CancelledWithResultError, wait_for
+from .impl import CancelledWithResultError, wait_for, wait_for_special_raise, wait_for_no_waiter, wait_for_no_waiter_alt
