@@ -6,6 +6,7 @@ This implementation is mostly copied from asyncio.tasks (Python 3.8) while makin
 """
 import sys
 from asyncio import CancelledError, ensure_future, TimeoutError
+
 try:
     from asyncio import get_running_loop
 except ImportError:
@@ -38,7 +39,7 @@ class CancelledWithResultError(CancelledError):
         return self.args[0]
 
 
-async def wait_for(fut, timeout, *, loop=None):
+async def wait_for(fut, timeout, *, loop=None, race_handler=None):
     """
     Alternate implementation of asyncio.wait_for() based on the version from Python 3.8. It handles simultaneous
     cancellation of wait and completion of future differently and consistently across python versions 3.6+.
@@ -57,6 +58,10 @@ async def wait_for(fut, timeout, *, loop=None):
     Using this implementation, in case both conditions occur at the same time a subclassed CancelledError will be
     raised which also contains the result of the future. The caller code must catch this exception and handle the
     result if it is important. Otherwise it can be used the same way as the builtin wait_for.
+
+    If the caller prefers to handle the race-condition with a callback, the `race_handler` argument may be provided.
+    It will be called with the result of the future when the waiter task is being cancelled. Even if this is provided
+    the special error will be raised in the place of a normal CancelledError.
 
     NOTE: CancelledWithResultError is limited to the coroutine wait_for is invoked from!
     If this wait_for is wrapped in tasks those will not propagate the special exception, but raise their own
@@ -95,12 +100,23 @@ async def wait_for(fut, timeout, *, loop=None):
             await waiter
         except CancelledError:
             if fut.done():
-                e = fut.exception()
-                raise CancelledWithResultError(e if e else fut.result())
-            else:
-                fut.remove_done_callback(cb)
-                fut.cancel()
-                raise
+                try:
+                    fut_result = fut.exception()
+                    if fut_result is None:
+                        fut_result = fut.result()
+                except CancelledError:
+                    raise  # inner future was also cancelled
+                if race_handler:
+                    try:
+                        race_handler(fut_result)
+                    except Exception as e:
+                        loop.call_exception_handler(
+                            {"message": "wait_for2 race_handler failed", "exception": e, "future": fut}
+                        )
+                raise CancelledWithResultError(fut_result)
+            fut.remove_done_callback(cb)
+            await _cancel_and_wait(fut, loop=loop)
+            raise
 
         if fut.done():
             return fut.result()
