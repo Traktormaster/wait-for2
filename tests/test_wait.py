@@ -5,6 +5,7 @@ Test the behaviour of the new implementation while asserting the behaviour of th
 :license: Apache2, see LICENSE for more details.
 """
 import asyncio
+import math
 import sys
 
 import pytest
@@ -17,6 +18,7 @@ TASK_NUM = 10000  # may need to scale to CPU performance for the test to be effe
 
 RESOURCES = set()
 EXIT = False
+WAIT_FOR_TIMED_OUT = False
 
 
 def cleanup_resource(resource):
@@ -28,11 +30,14 @@ async def create_resource():
     Simulates a well-behaved coroutine that acquires some resource.
     Well-behaved means that it does not leak the resource if the coroutine is cancelled.
     """
-    await asyncio.sleep(0.0)
+    work = 1 + len(RESOURCES)
+    for _ in range(int(math.log10(work))):
+        await asyncio.sleep(0.0)
     resource = object()
     RESOURCES.add(resource)
     try:
-        await asyncio.sleep(0.0)
+        for _ in range(int(math.log10(work))):
+            await asyncio.sleep(0.0)
         return resource
     except asyncio.CancelledError:
         cleanup_resource(resource)
@@ -41,13 +46,17 @@ async def create_resource():
 
 async def resource_worker(wait_for_impl, use_special_raise=False, cancel_event=None, **wait_for_kwargs):
     try:
-        resource = await wait_for_impl(create_resource(), timeout=0.1, **wait_for_kwargs)
+        resource = await wait_for_impl(create_resource(), timeout=99999.0, **wait_for_kwargs)
+    except asyncio.TimeoutError:
+        global WAIT_FOR_TIMED_OUT
+        WAIT_FOR_TIMED_OUT = True
+        raise
     except wait_for2.CancelledWithResultError as e:
         if use_special_raise:
             cleanup_resource(e.result)
         raise
     try:
-        if not cancel_event.is_set() and len(RESOURCES) > TASK_NUM // 3:
+        if not cancel_event.is_set() and len(RESOURCES) > TASK_NUM * 0.1:
             cancel_event.set()
         while not EXIT:
             await asyncio.sleep(1.0)
@@ -77,6 +86,7 @@ async def _resource_handling_test(wait_for_impl, **wait_for_kwargs):
         await asyncio.gather(*tasks, return_exceptions=True)
         assert False, "wait_for within a task ignored the cancellation"
     finally:
+        assert not WAIT_FOR_TIMED_OUT, "We should focus on the cancellation race right now"
         assert cancel_event.is_set(), "Cancellation was not initiated!"
         # to ensure different runs don't interfere
         assert all(task.done() for task in tasks), "Tasks were not terminated!"
