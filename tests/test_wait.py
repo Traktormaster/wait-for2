@@ -12,6 +12,7 @@ import pytest
 
 import wait_for2
 from wait_for2.impl28149 import wait_for as wait_for28149
+from wait_for2.impl28149_2 import wait_for as wait_for28149_2
 
 BUILTIN_PREFERS_CANCELLATION_OVER_RESULT = sys.version_info < (3, 8) or hasattr(sys, "pypy_version_info")
 TASK_NUM = 10000  # may need to scale to CPU performance for the test to be effective
@@ -129,3 +130,10 @@ async def test_resource_leakage_28149():
     # retains the preferred cancellation behaviour
     with pytest.raises(AssertionError, match="resources were leaked"):
         await _resource_handling_test(wait_for28149)
+
+
+@pytest.mark.asyncio
+async def test_resource_leakage_28149_2():
+    # retains the preferred cancellation behaviour
+    with pytest.raises(AssertionError, match="wait_for within a task ignored the cancellation"):
+        await _resource_handling_test(wait_for28149_2)

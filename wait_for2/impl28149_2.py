@@ -1,33 +1,13 @@
-# from commit 5a79cf2d3b9dfdc5f439986fa11d9c1cc49424e1
+# from commit cb593779071a0baf92c550df8082c7dfc48b7467
 
 import asyncio
-import enum
 import functools
 from asyncio import ensure_future
-
-_SENTINEL = enum.Enum("_SENTINEL", "sentinel")
-sentinel = _SENTINEL.sentinel
 
 
 def _release_waiter(waiter, *args):
     if not waiter.done():
         waiter.set_result(None)
-
-
-async def _cancel_and_wait(fut, loop):
-    """Cancel the *fut* future or task and wait until it completes."""
-
-    waiter = loop.create_future()
-    cb = functools.partial(_release_waiter, waiter)
-    fut.add_done_callback(cb)
-
-    try:
-        fut.cancel(sentinel)
-        # We cannot wait on *fut* directly to make
-        # sure _cancel_and_wait itself is reliably cancellable.
-        await waiter
-    finally:
-        fut.remove_done_callback(cb)
 
 
 async def wait_for(fut, timeout):
@@ -67,8 +47,8 @@ async def wait_for(fut, timeout):
         # wait until the future completes or the timeout
         try:
             await waiter
-        except asyncio.CancelledError as e:
-            if fut.done() and e.args == (sentinel,):
+        except asyncio.CancelledError:
+            if fut.done():
                 return fut.result()
             else:
                 fut.remove_done_callback(cb)
@@ -76,7 +56,7 @@ async def wait_for(fut, timeout):
                 # after wait_for() returns.
                 # See https://bugs.python.org/issue32751
                 await _cancel_and_wait(fut, loop=loop)
-                raise
+                return fut.result()
 
         if fut.done():
             return fut.result()
@@ -95,3 +75,19 @@ async def wait_for(fut, timeout):
                 raise asyncio.TimeoutError() from exc
     finally:
         timeout_handle.cancel()
+
+
+async def _cancel_and_wait(fut, loop):
+    """Cancel the *fut* future or task and wait until it completes."""
+
+    waiter = loop.create_future()
+    cb = functools.partial(_release_waiter, waiter)
+    fut.add_done_callback(cb)
+
+    try:
+        fut.cancel()
+        # We cannot wait on *fut* directly to make
+        # sure _cancel_and_wait itself is reliably cancellable.
+        await waiter
+    finally:
+        fut.remove_done_callback(cb)
