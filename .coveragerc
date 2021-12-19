@@ -1,0 +1,17 @@
+[run]
+parallel = False
+branch = True
+include =
+    wait_for2/*
+    tests/*
+
+[report]
+# Regexes for lines to exclude from consideration
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    def __str__
+    assert False
+    raise AssertionError
+    raise NotImplementedError
+    if __name__ == .__main__.:

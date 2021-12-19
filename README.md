@@ -22,6 +22,13 @@ If the caller prefers to handle the race-condition with a callback, the `race_ha
 It will be called with the result of the future when the waiter task is being cancelled. Even if this is provided,
 the special error will be raised in the place of a normal CancelledError.
 
+Additionally, this implementation will inherit the behaviour of the inner future when it comes to ignoring
+cancellation. The builtin version prefers to always be cancellable, even if that means the wrapped future may
+not be terminated with it. (behaviour of builtin _cancel_and_wait) This behaviour is also improved in
+timeout-cancel edge cases, where the builtin would not wait for the termination of the inner future if the
+waiter was cancelled after timeout handling had already started. This is more consistent as the inner future
+must always be stopped for it to return.
+
 NOTE: `CancelledWithResultError` is limited to the coroutine `wait_for` is invoked from!
 If this `wait_for` is wrapped in tasks those will not propagate the special exception, but raise their own
 `CancelledError` instances.
