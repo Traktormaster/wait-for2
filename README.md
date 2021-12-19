@@ -46,8 +46,8 @@ import wait_for2
 
 task = asyncio.create_task(...)
 
-async def process_result(r):
-    print("processed:", r)
+async def process_result(r, is_exc=False):
+    print("processed:", r, is_exc)
 
 ...
 
@@ -55,7 +55,7 @@ try:
     await process_result(await wait_for2.wait_for(task, 5.0))
 except wait_for2.CancelledWithResultError as e:
     # NOTE: e.result could be an exception raised by the task; handling or ignoring it is up to the user code here
-    await process_result(e.result)
+    await process_result(e.result, e.is_exception)
     raise asyncio.CancelledError()
 
 # alternatively with a callback:
