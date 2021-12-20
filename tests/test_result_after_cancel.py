@@ -28,12 +28,14 @@ async def _exception_at_cancel(error, delay=0.0):
 
 @pytest.mark.asyncio
 async def test_result_after_cancel_builtin():
-    # Builtin prioritizes timeout even if result is received.
+    # 1. At natural timeout, a result or exception should be prioritized.
     sentinel = object()
     if BUILTIN_PREFERS_TIMEOUT_OVER_RESULT:
+        # Builtin prioritizes timeout even if result is received.
         with pytest.raises(asyncio.TimeoutError):
             await asyncio.wait_for(_result_at_cancel(sentinel), timeout=0.5)
     else:
+        # Builtin returns result instead of the timeout.
         assert await asyncio.wait_for(_result_at_cancel(sentinel), timeout=0.5) is sentinel
     sentinel_error = Exception()
     if BUILTIN_PREFERS_TIMEOUT_OVER_EXCEPTION:
@@ -41,13 +43,16 @@ async def test_result_after_cancel_builtin():
         with pytest.raises(asyncio.TimeoutError):
             await asyncio.wait_for(_exception_at_cancel(sentinel_error), timeout=0.5)
     else:
-        # Builtin propagates an error instead of the timeout though.
+        # Builtin propagates an error instead of the timeout.
         try:
             await asyncio.wait_for(_exception_at_cancel(sentinel_error), timeout=0.5)
         except Exception as e:
             assert sentinel_error is e
         else:
             assert False, "did not raise"
+
+    # NOTE: At natural timeout, if an explicit cancellation occurs, the cancellation should have priority, even though
+    # the result will be lost due to the lack of support for handling the race-condition.
 
 
 @pytest.mark.asyncio

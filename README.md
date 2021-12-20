@@ -1,10 +1,15 @@
 # wait_for2
-Alternate implementation of `asyncio.wait_for()` based on the version from Python 3.8. It handles simultaneous
-cancellation of wait and completion of future differently and consistently across Python versions 3.6+.
+Alternate implementation of `asyncio.wait_for()`. It handles several edge cases like simultaneous
+cancellation of wait and completion of future differently and consistently across Python versions 3.7+.
 
 ## Details
+The tests in the repository are set up with TOX to cover and assert the following behaviours of `wait_for` and the
+alternate implementation for each Python version.
+
+### Cancellation behaviour with simultaneous result
+
 Builtin `asyncio.wait_for()` behaviours:
-  - Python 3.6, 3.7 and PyPy3:
+  - Python 3.7 and PyPy3:
     Cancellation of `wait_for` could lose the completed future's result.
   - Python 3.8+:
     Cancellation of `wait_for` could lose the cancellation request.
@@ -22,6 +27,36 @@ If the caller prefers to handle the race-condition with a callback, the `race_ha
 It will be called with the result of the future when the waiter task is being cancelled. Even if this is provided,
 the special error will be raised in the place of a normal CancelledError.
 
+NOTE: `CancelledWithResultError` is limited to the coroutine `wait_for` is invoked from!
+If this `wait_for` is wrapped in tasks those will not propagate the special exception, but raise their own
+`CancelledError` instances. The callback-based solution may be preferred as that will always work.
+
+This table summarizes the behaviours in the race-condition cases.
+The cross cells show what behaviour is observed:
+- LR: looses result (returned result or raised exception)
+- LC: looses cancellation request
+- RH: race-condition handling supported, cancellation is never ignored by the wait-for
+
+|                                    | Python 3.7 | Python 3.8 | Python 3.9 | Python 3.10 | PyPy 3    | wait_for2 |
+|------------------------------------|------------|------------|------------|-------------|-----------|-----------|
+| explicit cancel & result (or exc.) | LR         | LC         | LC         | LC          | LR        | ***RH***  |
+
+
+### Timeout handling behaviour with results
+
+When the timeout is reached, the inner future is cancelled. This can also cause race condition where the result is lost.
+
+The cross cells show what behaviour is observed:
+- TE: prioritizes raising `TimeoutError`, looses result or exception
+- PR: prioritizes returning or raising the result exception
+
+|                                   | Python 3.7 | Python 3.8 | Python 3.9 | Python 3.10 | PyPy 3    | wait_for2 |
+|-----------------------------------|------------|------------|------------|-------------|-----------|-----------|
+| result after cancel by timeout    | TE         | TE         | TE         | ***PR***    | TE        | ***PR***  |
+| exception after cancel by timeout | TE         | TE         | ***PR***   | ***PR***    | TE        | ***PR***  |
+
+### Cancellation behaviour with timeout handling
+
 Additionally, this implementation will inherit the behaviour of the inner future when it comes to ignoring
 cancellation. The builtin version prefers to always be cancellable, even if that means the wrapped future may
 not be terminated with it. (behaviour of builtin _cancel_and_wait) This behaviour is also improved in
@@ -29,9 +64,25 @@ timeout-cancel edge cases, where the builtin would not wait for the termination 
 waiter was cancelled after timeout handling had already started. This is more consistent as the inner future
 must always be stopped for it to return.
 
-NOTE: `CancelledWithResultError` is limited to the coroutine `wait_for` is invoked from!
-If this `wait_for` is wrapped in tasks those will not propagate the special exception, but raise their own
-`CancelledError` instances.
+The leftmost column describes the case where the behaviour is tested. It shows what timeout the wait-for is called with
+and when the cancellation occurs relative to it.
+
+The cross-cells show the raised result and if the inner future is terminated before the wait-for implementation returns:
+- C/T: `CancelledError`/`TimeoutError` was raised
+- B/U: `bound` means the inner future terminated before the wait-for returned/`unbound` means the inner future was still
+  running when the wait-for returned
+
+The cells where the desired behaviour is observed (IMO) are formatted to be bold-italic.
+
+|                             | Python 3.7 | Python 3.8 | Python 3.9 | Python 3.10 | PyPy 3    | wait_for2 |
+|-----------------------------|------------|------------|------------|-------------|-----------|-----------|
+| no timeout, cancel          | ***C B***  | **C B**    | **C B**    | **C B**     | ***C B*** | ***C B*** |
+| zero timeout, cancel before | T U        | C U        | C U        | C U         | T U       | ***C B*** |
+| zero timeout, cancel after  | T U        | C U        | C U        | C U         | T U       | ***C B*** |
+| zero timeout, no cancel     | T U        | ***T B***  | ***T B***  | ***T B***   | T U       | ***T B*** |
+| some timeout, cancel before | C U        | ***C B***  | ***C B***  | ***C B***   | C U       | ***C B*** |
+| some timeout, cancel after  | C U        | C U        | C U        | C U         | C U       | ***C B*** |
+| some timeout, no cancel     | ***T B***  | ***T B***  | ***T B***  | ***T B***   | ***T B*** | ***T B*** |
 
 # Install & usage
 A package is available on PyPI:
