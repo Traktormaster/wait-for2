@@ -3,7 +3,7 @@ import asyncio
 import pytest
 
 import wait_for2
-from tests.common.constants import BUILTIN_PREFERS_TIMEOUT_OVER_RESULT
+from tests.common.constants import BUILTIN_PREFERS_TIMEOUT_OVER_RESULT, BUILTIN_PREFERS_TIMEOUT_OVER_EXCEPTION
 
 
 async def _result_at_cancel(result, delay=0.0):
@@ -30,10 +30,13 @@ async def _exception_at_cancel(error, delay=0.0):
 async def test_result_after_cancel_builtin():
     # Builtin prioritizes timeout even if result is received.
     sentinel = object()
-    with pytest.raises(asyncio.TimeoutError):
-        await asyncio.wait_for(_result_at_cancel(sentinel), timeout=0.5)
-    sentinel_error = Exception()
     if BUILTIN_PREFERS_TIMEOUT_OVER_RESULT:
+        with pytest.raises(asyncio.TimeoutError):
+            await asyncio.wait_for(_result_at_cancel(sentinel), timeout=0.5)
+    else:
+        assert await asyncio.wait_for(_result_at_cancel(sentinel), timeout=0.5) is sentinel
+    sentinel_error = Exception()
+    if BUILTIN_PREFERS_TIMEOUT_OVER_EXCEPTION:
         # Builtin prioritizes timeout even if error is raised.
         with pytest.raises(asyncio.TimeoutError):
             await asyncio.wait_for(_exception_at_cancel(sentinel_error), timeout=0.5)

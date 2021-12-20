@@ -1,5 +1,8 @@
 # wait_for2
 
+## 0.3.1
+- Added 3.10 compatibility
+
 ## 0.3.0
 - Redesigned all wait-for handling branches to behave consistently
 - Improved test coverage to 100% (with branch coverage)
