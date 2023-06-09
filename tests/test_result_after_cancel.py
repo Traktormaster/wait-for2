@@ -3,7 +3,11 @@ import asyncio
 import pytest
 
 import wait_for2
-from tests.common.constants import BUILTIN_PREFERS_TIMEOUT_OVER_RESULT, BUILTIN_PREFERS_TIMEOUT_OVER_EXCEPTION
+from tests.common.constants import (
+    BUILTIN_PREFERS_TIMEOUT_OVER_RESULT,
+    BUILTIN_PREFERS_TIMEOUT_OVER_EXCEPTION,
+    BUILTIN_PROPAGATES_CUSTOM_CANCEL,
+)
 
 
 async def _result_at_cancel(result, delay=0.0):
@@ -89,9 +93,9 @@ async def test_result_after_cancel_wf2():
             wf.cancel()
             await wf
         except wait_for2.CancelledWithResultError:
-            assert False, "this does not work because the task does not propagate the custom exception"
+            assert BUILTIN_PROPAGATES_CUSTOM_CANCEL, "task does not propagate the custom exception"
         except asyncio.CancelledError:
-            pass  # as expected
+            assert not BUILTIN_PROPAGATES_CUSTOM_CANCEL, "custom exception should be propagated"
         else:
             assert False, "did not raise"
         assert handled == [(sentinel, False)]
@@ -105,9 +109,9 @@ async def test_result_after_cancel_wf2():
             wf.cancel()
             await wf
         except wait_for2.CancelledWithResultError:
-            assert False, "this does not work because the task does not propagate the custom exception"
+            assert BUILTIN_PROPAGATES_CUSTOM_CANCEL, "task does not propagate the custom exception"
         except asyncio.CancelledError:
-            pass  # as expected
+            assert not BUILTIN_PROPAGATES_CUSTOM_CANCEL, "custom exception should be propagated"
         else:
             assert False, "did not raise"
         assert handled == [(sentinel_error, True)]
