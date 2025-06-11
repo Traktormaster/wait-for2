@@ -14,7 +14,7 @@ class ResourceError(Exception):
 
 
 class ResourceWorkerWaitForTester(object):
-    CANCELLATION_TIME_LIMIT = 0.5
+    CANCELLATION_TIME_LIMIT = 1.0
 
     def __init__(
         self,
@@ -41,11 +41,11 @@ class ResourceWorkerWaitForTester(object):
         self.cancel_after_task = int(task_num * cancel_after_task_percent)
         self.wait_for_timeout = wait_for_timeout
 
-    async def run(self, **wait_for_kwargs):
+    async def run(self, use_special_raise=False, **wait_for_kwargs):
         # Create a bunch of parallel tasks that will await using the wait_for impl being tested with different timings.
         tasks = []
         for i in range(self.task_num):
-            t = asyncio.create_task(self._resource_worker(i, **wait_for_kwargs))
+            t = asyncio.create_task(self._resource_worker(i, use_special_raise=use_special_raise, **wait_for_kwargs))
             t.add_done_callback(partial(self._task_done, i))
             tasks.append(t)
 
@@ -67,6 +67,10 @@ class ResourceWorkerWaitForTester(object):
             assert time.perf_counter() - cancel_start < self.CANCELLATION_TIME_LIMIT, "cancellation was slow"
         finally:
             assert all(task.done() for task in tasks), "Tasks were not terminated!"
+        if not use_special_raise:
+            for task in tasks:
+                if not task.cancelled() and isinstance(task.exception(), ResourceError):
+                    self.cleanup_got_error += 1
         self._evaluate_behaviour()
 
     def _evaluate_behaviour(self):
@@ -76,7 +80,7 @@ class ResourceWorkerWaitForTester(object):
         assert self.cancelled_during_resource_creation > 0, "Cover this case"
         assert self.waiting_timed_out == 0, "We should focus on the cancellation race right now"
         assert self.waiting_finished > 0, "Some must be successfully returned"
-        assert self.cleanup_got_error > 0, "???"
+        assert self.cleanup_got_error > 0, "Special raise cleanup never called"
 
     def _task_done(self, num, t):
         if not self.cancel_event.is_set() and num > self.cancel_after_task:
@@ -156,8 +160,6 @@ class ResourceWorkerWaitForTester(object):
             raise
 
     def _create_resource(self, num):
-        # if not self.cancel_event.is_set() and num > self.cancel_after_task:
-        #     self.cancel_event.set()
         resource = Resource()
         self.resources.add(resource)
         return resource

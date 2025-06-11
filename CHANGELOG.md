@@ -1,5 +1,10 @@
 # wait_for2
 
+## 0.4.0
+- Changed implementation to prefer builtin asyncio.wait_for when possible using Python 3.12+
+- Updated tests to reflect new implementation
+- Dropped Python 3.7 compatibility testing
+
 ## 0.3.1
 - Added 3.10 compatibility
 

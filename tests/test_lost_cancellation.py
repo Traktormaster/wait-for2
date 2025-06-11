@@ -4,7 +4,7 @@ from functools import partial
 import pytest
 
 import wait_for2
-from tests.common.constants import BUILTIN_PREFERS_CANCELLATION_OVER_RESULT
+from tests.common.constants import BUILTIN_WAIT_FOR_BEHAVIOUR
 
 
 async def _check_guard_cancellation_task(wait_for_impl, **wait_for_kwargs):
@@ -60,12 +60,12 @@ async def _check_guard_cancellation_future(wait_for_impl, **wait_for_kwargs):
 @pytest.mark.asyncio
 async def test_race_condition_by_timing_builtin():
     f = _check_guard_cancellation_task(asyncio.wait_for)
-    if BUILTIN_PREFERS_CANCELLATION_OVER_RESULT:
+    if BUILTIN_WAIT_FOR_BEHAVIOUR["some timeout, cancel after "] == "cancelled bound":
         assert await f, "task result was lost by race-condition"
     else:
         assert not await f, "task cancellation was ignored by race-condition"
     f = _check_guard_cancellation_future(asyncio.wait_for)
-    if BUILTIN_PREFERS_CANCELLATION_OVER_RESULT:
+    if BUILTIN_WAIT_FOR_BEHAVIOUR["some timeout, cancel after "] == "cancelled bound":
         assert await f, "future result was lost by race-condition"
     else:
         assert not await f, "future cancellation was ignored by race-condition"

@@ -75,12 +75,12 @@ async def inner_bind_behaviour_check(wait_for_impl):
     Return a string describing the behaviour for each timeout-handling case, with the result of the wait-for
     implementation and if the inner future's life was bound to it.
     """
-    return [
-        "no timeout                 : " + await _inner_bind_behaviour_check(wait_for_impl, None, False),
-        "no wait, cancel before     : " + await _inner_bind_behaviour_check(wait_for_impl, 0, True),
-        "no wait, cancel after      : " + await _inner_bind_behaviour_check(wait_for_impl, 0, False),
-        "no wait, no cancel         : " + await _inner_bind_behaviour_check(wait_for_impl, 0, None),
-        "some timeout, cancel before: " + await _inner_bind_behaviour_check(wait_for_impl, 1.0, True),
-        "some timeout, cancel after : " + await _inner_bind_behaviour_check(wait_for_impl, 1.0, False),
-        "some timeout, no cancel    : " + await _inner_bind_behaviour_check(wait_for_impl, 1.0, None),
-    ]
+    return {
+        "no timeout                 ": await _inner_bind_behaviour_check(wait_for_impl, None, False),
+        "no wait, cancel before     ": await _inner_bind_behaviour_check(wait_for_impl, 0, True),
+        "no wait, cancel after      ": await _inner_bind_behaviour_check(wait_for_impl, 0, False),
+        "no wait, no cancel         ": await _inner_bind_behaviour_check(wait_for_impl, 0, None),
+        "some timeout, cancel before": await _inner_bind_behaviour_check(wait_for_impl, 1.0, True),
+        "some timeout, cancel after ": await _inner_bind_behaviour_check(wait_for_impl, 1.0, False),
+        "some timeout, no cancel    ": await _inner_bind_behaviour_check(wait_for_impl, 1.0, None),
+    }

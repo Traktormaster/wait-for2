@@ -1,15 +1,23 @@
 # wait_for2
+
+**If you only want to support Python 3.12+ then you should not need this library.**
+
 Alternate implementation of `asyncio.wait_for()`. It handles several edge cases like simultaneous
 cancellation of wait and completion of future differently and consistently across Python versions 3.7+.
 
 ## Updates
 
-This library may become unnecessary for Python 3.12+, see https://github.com/python/cpython/pull/28149#issuecomment-1560278644
+This library is pretty much unnecessary for Python 3.12+, the last primary race-condition was addressed: https://github.com/python/cpython/pull/28149#issuecomment-1560278644
 
-A few more behaviour variances have been introduced that are not reflected in the details below. For example
-Python 3.9.10 changes the behaviour of simultaneous timeout and completion compared to previous 3.9 releases.
-PyPy 3 used to mirror the 3.7 behaviour, but the current release have changed the behaviour at some unspecified
-release to 3.9.10+.
+If you need to support older Python versions you may still use it. Since version `0.4.0` the library will actually
+use the builtin `asyncio.wait_for` when running in Python 3.12+, unless a `race_handler` parameter is passed. This
+behaviour retains backwards compatibility with the library, but actually prefers a more correct implementation,
+as the new `asyncio.wait_for` does not need a special race-condition handling.
+
+The behavioural details below were made for Python 3.7-3.10 and have not been updated. For example a few more behaviour
+variances have been introduced in Python 3.9.10. It changes the behaviour of simultaneous timeout and completion
+compared to previous 3.9 releases. PyPy 3 used to mirror the 3.7 behaviour, but the current release have changed the
+behaviour at some unspecified release to 3.9.10+, and even later Python 3.12+...
 
 ## Details
 The tests in the repository are set up with TOX to cover and assert the following behaviours of `wait_for` and the
