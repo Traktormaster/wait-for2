@@ -26,7 +26,7 @@ setup(
     url="https://github.com/Traktormaster/wait-for2",
     author=author,
     author_email=author_email,
-    license="Apache 2.0",
+    license="Apache-2.0",
     classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.8",
@@ -38,7 +38,6 @@ setup(
         "Programming Language :: Python :: Implementation :: CPython",
         "Programming Language :: Python :: Implementation :: PyPy",
         "Intended Audience :: Developers",
-        "License :: OSI Approved :: Apache Software License",
     ],
     packages=["wait_for2"],
 )
