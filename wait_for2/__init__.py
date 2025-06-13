@@ -9,7 +9,7 @@ Asyncio wait_for that can handle simultaneous cancellation and future completion
 __author__ = "Nándor Mátravölgyi"
 __copyright__ = "Copyright 2021 Nándor Mátravölgyi"
 __author_email__ = "nandor.matra@gmail.com"
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 
 import sys
 
